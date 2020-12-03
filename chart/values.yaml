@@ -1,0 +1,28 @@
+# Default values for microservice.
+
+namespace: tdc-poa
+replicaCount: 2
+
+image:
+  repository: 
+  tag: 
+  #image repo and tag set by CD pipeline
+  pullPolicy: IfNotPresent
+
+environment: development
+
+service:
+  enabled: true
+  type: LoadBalancer
+  httpPort: 80
+  externalPort: 80
+
+resources:
+  limits:
+    cpu: 400m
+    memory: 128Mi
+  requests:
+    cpu: 200m
+    memory: 64Mi
+
+
