@@ -13,14 +13,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 3.1.301
-    - name: Install dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
     - uses: azure/docker-login@v1
       with:
           login-server: ${{ secrets.CONTAINER_REGISTRY }}
@@ -29,3 +21,26 @@ jobs:
     - run: |
         docker build . -t ${{ secrets.CONTAINER_REGISTRY }}/tdcpoaaks:$GITHUB_SHA
         docker push ${{ secrets.CONTAINER_REGISTRY }}/tdcpoaaks:$GITHUB_SHA
+    - uses: azure/aks-set-context@v1
+      with:
+            creds: '${{ secrets.AZURE_CREDENTIALS }}'
+            cluster-name: tdcpoaaks
+            resource-group: tdc-poa
+    - name: Create namespace
+      run:  |
+          if [ -n "$(kubectl get namespace tdc-poa --ignore-not-found -o name)" ]; then exit 0; fi
+          kubectl create namespace tdc-poa 
+    - uses: azure/k8s-bake@v1
+      with:
+            renderEngine: 'helm2'
+            helmChart: './chart'
+            releaseName: todo-microservices
+            overrides: |
+              image.repository:${{ secrets.CONTAINER_REGISTRY }}/tdcpoaaks
+              image.tag:${{ github.sha }}
+      id: bake
+    - uses: azure/k8s-deploy@v1
+      with:
+          manifests: ${{ steps.bake.outputs.manifestsBundle }}
+          namespace: tdc-poa
+
